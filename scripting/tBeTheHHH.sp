@@ -25,6 +25,9 @@ new bool:g_bSdkStarted = false;
 new Handle:g_hSdkEquipWearable;
 new Handle:g_hSdkRemoveWearable;
 
+new Handle:g_hCvarEffects = INVALID_HANDLE;
+new bool:g_bEffects;
+
 new Handle:g_hCvarEnabled = INVALID_HANDLE;
 new bool:g_bEnabled;
 
@@ -51,6 +54,8 @@ public OnPluginStart() {
 	HookConVarChange(g_hCvarEnabled, Cvar_Changed);
 
 	g_hCvarDisableOnDeath = CreateConVar("sm_tbethehhh_disableondeath", "1", "Stop being a hhh on death.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hCvarEffects = CreateConVar("sm_tbethehhh_effects", "1", "Enables effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	HookConVarChange(g_hCvarEffects, Cvar_Changed);
 	HookConVarChange(g_hCvarDisableOnDeath, Cvar_Changed);
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
@@ -63,6 +68,7 @@ public OnPluginStart() {
 public OnConfigsExecuted() {
 	g_bEnabled = GetConVarBool(g_hCvarEnabled);
 	g_bDisableOnDeath = GetConVarBool(g_hCvarDisableOnDeath);
+	g_bEffects = GetConVarBool(g_hCvarEffects);
 }
 
 public Cvar_Changed(Handle:convar, const String:oldValue[], const String:newValue[]) {
@@ -161,24 +167,28 @@ public MakeHHH(iClient) {
 }
 
 public HHHDeath(iClient) {
-	new Float:vPos[3];
-	GetClientAbsOrigin(iClient, vPos);
+	if(g_bEffects) {
+		new Float:vPos[3];
+		GetClientAbsOrigin(iClient, vPos);
 
-	CreateParticle(vPos, "halloween_boss_death", 4.0);
-	EmitAmbientSound(SOUND_DEATH, vPos, iClient);
+		CreateParticle(vPos, "halloween_boss_death", 4.0);
+		EmitAmbientSound(SOUND_DEATH, vPos, iClient);
+	}
 
 	RemoveHHHModel(iClient);
 }
 
 public Action:HHHSummonEffects(Handle:timer, any:iClient) {
-	new Float:vPos[3];
-	GetClientAbsOrigin(iClient, vPos);
+	if(g_bEffects) {
+		new Float:vPos[3];
+		GetClientAbsOrigin(iClient, vPos);
 
-	EmitAmbientSound(SOUND_SPAWN, vPos, iClient);
-	CreateParticle(vPos, "halloween_boss_summon", 4.0);
-	AttachParticle(iClient, "ghost_firepit_firebits", "flag", 4.0);
-	AttachParticle(iClient, "ghost_firepit_wisps", "flag", 4.0);
-	AttachParticle(iClient, "ghost_firepit", "flag", 3.0);
+		EmitAmbientSound(SOUND_SPAWN, vPos, iClient);
+		CreateParticle(vPos, "halloween_boss_summon", 4.0);
+		AttachParticle(iClient, "ghost_firepit_firebits", "flag", 4.0);
+		AttachParticle(iClient, "ghost_firepit_wisps", "flag", 4.0);
+		AttachParticle(iClient, "ghost_firepit", "flag", 3.0);
+	}
 }
 
 /* ----------------------------------------------
