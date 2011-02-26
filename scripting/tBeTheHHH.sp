@@ -89,7 +89,7 @@ public Action:Command_MakeMeHHH(iClient, args) {
 	if(!g_bEnabled && iClient > 0 && iClient < MaxClients)return Plugin_Handled;
 
 	if(args > 0) {
-		if(!CheckCommandAccess(iClient, "sm_bethehorseman", REQUIRED_FLAGS)) {
+		if(!CheckCommandAccess(iClient, "sm_bethehhh", REQUIRED_FLAGS)) {
 			ReplyToCommand(iClient, "You don't have access to this command.");
 			return Plugin_Handled;
 		}
@@ -121,7 +121,7 @@ public Action:Command_MakeMeHHH(iClient, args) {
 			RemoveHHHModel(iClient);
 			g_bIsHHH[iClient] = false;
 		} else {
-			if(!CheckCommandAccess(iClient, "sm_bethehorseman", REQUIRED_FLAGS)) {
+			if(!CheckCommandAccess(iClient, "sm_bethehhh", REQUIRED_FLAGS)) {
 				ReplyToCommand(iClient, "You don't have access to this command.");
 				return Plugin_Handled;
 			}
