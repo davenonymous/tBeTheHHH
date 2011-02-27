@@ -3,7 +3,7 @@
 #include <sdktools>
 #include <attachables>
 
-#define VERSION 		"0.0.1"
+#define VERSION 		"0.0.3"
 
 #define MODEL_HHH		"models/bots/headless_hatman.mdl"
 //#define MODEL_HHH		"models/player/demo.mdl"
@@ -25,8 +25,11 @@ new bool:g_bSdkStarted = false;
 new Handle:g_hSdkEquipWearable;
 new Handle:g_hSdkRemoveWearable;
 
-new Handle:g_hCvarEffects = INVALID_HANDLE;
-new bool:g_bEffects;
+new Handle:g_hCvarEffectSound = INVALID_HANDLE;
+new bool:g_bEffectSound;
+
+new Handle:g_hCvarEffectParticle = INVALID_HANDLE;
+new bool:g_bEffectParticle;
 
 new Handle:g_hCvarEnabled = INVALID_HANDLE;
 new bool:g_bEnabled;
@@ -54,9 +57,11 @@ public OnPluginStart() {
 	HookConVarChange(g_hCvarEnabled, Cvar_Changed);
 
 	g_hCvarDisableOnDeath = CreateConVar("sm_tbethehhh_disableondeath", "1", "Stop being a hhh on death.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hCvarEffects = CreateConVar("sm_tbethehhh_effects", "1", "Enables effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	HookConVarChange(g_hCvarEffects, Cvar_Changed);
+	g_hCvarEffectSound = CreateConVar("sm_tbethehhh_effects_sound", "1", "Enables sound effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hCvarEffectParticle = CreateConVar("sm_tbethehhh_effects_particle", "1", "Enables particle effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	HookConVarChange(g_hCvarDisableOnDeath, Cvar_Changed);
+	HookConVarChange(g_hCvarEffectSound, Cvar_Changed);
+	HookConVarChange(g_hCvarEffectParticle, Cvar_Changed);
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_death", Event_PlayerDeath);
@@ -68,7 +73,8 @@ public OnPluginStart() {
 public OnConfigsExecuted() {
 	g_bEnabled = GetConVarBool(g_hCvarEnabled);
 	g_bDisableOnDeath = GetConVarBool(g_hCvarDisableOnDeath);
-	g_bEffects = GetConVarBool(g_hCvarEffects);
+	g_bEffectSound = GetConVarBool(g_hCvarEffectSound);
+	g_bEffectParticle = GetConVarBool(g_hCvarEffectParticle);
 }
 
 public Cvar_Changed(Handle:convar, const String:oldValue[], const String:newValue[]) {
@@ -167,23 +173,29 @@ public MakeHHH(iClient) {
 }
 
 public HHHDeath(iClient) {
-	if(g_bEffects) {
-		new Float:vPos[3];
-		GetClientAbsOrigin(iClient, vPos);
+	new Float:vPos[3];
+	GetClientAbsOrigin(iClient, vPos);
 
-		CreateParticle(vPos, "halloween_boss_death", 4.0);
+	if(g_bEffectSound) {
 		EmitAmbientSound(SOUND_DEATH, vPos, iClient);
+	}
+
+	if(g_bEffectParticle) {
+		CreateParticle(vPos, "halloween_boss_death", 4.0);
 	}
 
 	RemoveHHHModel(iClient);
 }
 
 public Action:HHHSummonEffects(Handle:timer, any:iClient) {
-	if(g_bEffects) {
-		new Float:vPos[3];
-		GetClientAbsOrigin(iClient, vPos);
+	new Float:vPos[3];
+	GetClientAbsOrigin(iClient, vPos);
 
+	if(g_bEffectSound) {
 		EmitAmbientSound(SOUND_SPAWN, vPos, iClient);
+	}
+
+	if(g_bEffectParticle) {
 		CreateParticle(vPos, "halloween_boss_summon", 4.0);
 		AttachParticle(iClient, "ghost_firepit_firebits", "flag", 4.0);
 		AttachParticle(iClient, "ghost_firepit_wisps", "flag", 4.0);
