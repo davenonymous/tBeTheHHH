@@ -166,9 +166,11 @@ public OnMapStart() {
 public MakeHHH(iClient) {
 	if(!g_bIsHHH[iClient]) {
 		g_bIsHHH[iClient] = true;
-		AssignHHHModel(iClient);
 
-		CreateTimer(0.5, HHHSummonEffects, iClient);
+		if(!IsClientObserver(iClient) && IsPlayerAlive(iClient)) {
+			AssignHHHModel(iClient);
+			CreateTimer(0.5, HHHSummonEffects, iClient);
+		}
 	}
 }
 
