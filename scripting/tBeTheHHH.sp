@@ -3,7 +3,7 @@
 #include <sdktools>
 #include <attachables>
 
-#define VERSION 		"0.0.3"
+#define VERSION 		"0.0.4"
 
 #define MODEL_HHH		"models/bots/headless_hatman.mdl"
 //#define MODEL_HHH		"models/player/demo.mdl"
