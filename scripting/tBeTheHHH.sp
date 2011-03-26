@@ -3,7 +3,7 @@
 #include <sdktools>
 #include <attachables>
 
-#define VERSION 		"0.0.4"
+#define VERSION 		"0.0.5-beta1"
 
 #define MODEL_HHH		"models/bots/headless_hatman.mdl"
 //#define MODEL_HHH		"models/player/demo.mdl"
@@ -42,6 +42,19 @@ new bool:g_bHasHHHModel[MAXPLAYERS+1];
 new g_iEntityOthers[MAXPLAYERS+1];
 new g_iEntitySelf[MAXPLAYERS+1];
 
+//Forwards
+new Handle:g_hForward_OverrideDOD;
+new Handle:g_hForward_OverrideParticles;
+new Handle:g_hForward_OverrideSound;
+
+new Handle:g_hForward_OnModelAttached;
+new Handle:g_hForward_OnModelDettached;
+new Handle:g_hForward_OnStart;
+new Handle:g_hForward_OnStop;
+
+new Handle:g_hForward_OnManualCommand;
+
+
 public Plugin:myinfo =
 {
 	name 		= "tBeTheHHH",
@@ -53,21 +66,77 @@ public Plugin:myinfo =
 public OnPluginStart() {
 	CreateConVar("sm_tbethehhh_version", VERSION, "", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	g_hCvarEnabled = CreateConVar("sm_tbethehhh_enable", "1", "Enable tHHH", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	HookConVarChange(g_hCvarEnabled, Cvar_Changed);
+	g_hCvarEnabled 					= CreateConVar("sm_tbethehhh_enable", "1", "Enable tHHH", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 
-	g_hCvarDisableOnDeath = CreateConVar("sm_tbethehhh_disableondeath", "1", "Stop being a hhh on death.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hCvarEffectSound = CreateConVar("sm_tbethehhh_effects_sound", "1", "Enables sound effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hCvarEffectParticle = CreateConVar("sm_tbethehhh_effects_particle", "1", "Enables particle effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hCvarDisableOnDeath 			= CreateConVar("sm_tbethehhh_disableondeath", "1", "Stop being a hhh on death.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hCvarEffectSound 				= CreateConVar("sm_tbethehhh_effects_sound", "1", "Enables sound effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hCvarEffectParticle 			= CreateConVar("sm_tbethehhh_effects_particle", "1", "Enables particle effects on HHH spawn.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+
+	g_hForward_OverrideDOD 			= CreateGlobalForward("HHH_OverrideDisableOnDeath", ET_Ignore, Param_CellByRef);
+	g_hForward_OverrideParticles 	= CreateGlobalForward("HHH_OverrideEffectParticles", ET_Ignore, Param_CellByRef);
+	g_hForward_OverrideSound 		= CreateGlobalForward("HHH_OverrideEffectSounds", ET_Ignore, Param_CellByRef);
+
+	g_hForward_OnModelAttached 		= CreateGlobalForward("HHH_OnModelAttached", ET_Ignore, Param_Cell);
+	g_hForward_OnModelDettached 	= CreateGlobalForward("HHH_OnModelDettached", ET_Ignore, Param_Cell);
+	g_hForward_OnStart 				= CreateGlobalForward("HHH_OnStart", ET_Ignore, Param_Cell);
+	g_hForward_OnStop 				= CreateGlobalForward("HHH_OnStop", ET_Ignore, Param_Cell);
+
+	g_hForward_OnManualCommand		= CreateGlobalForward("HHH_OnManualCommand", ET_Hook, Param_Cell, Param_Cell);
+
+	HookConVarChange(g_hCvarEnabled, Cvar_Changed);
 	HookConVarChange(g_hCvarDisableOnDeath, Cvar_Changed);
 	HookConVarChange(g_hCvarEffectSound, Cvar_Changed);
 	HookConVarChange(g_hCvarEffectParticle, Cvar_Changed);
 
-	HookEvent("player_spawn", Event_PlayerSpawn);
+	//HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("post_inventory_application", Event_Inventory);
 
 	RegConsoleCmd("sm_bethehorseman", Command_MakeMeHHH);
+}
+
+public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max) {
+	RegPluginLibrary("hhh");
+
+	CreateNative("HHH_ToggleHHH", Native_ToggleHHH);
+	CreateNative("HHH_IsHHH", Native_IsHHH);
+	CreateNative("HHH_HellmanCount", Native_HellmanCount);
+
+	return APLRes_Success;
+}
+
+public Native_ToggleHHH(Handle:hPlugin, iNumParams) {
+	new iClient = GetNativeCell(1);
+	new bool:bState = GetNativeCell(2);
+
+	if(!bState) {
+		RemoveHHHModel(iClient);
+		g_bIsHHH[iClient] = false;
+
+		Call_StartForward(g_hForward_OnStop);
+		Call_PushCell(iClient);
+		Call_Finish();
+	} else {
+		MakeHHH(iClient);
+	}
+
+}
+
+public Native_IsHHH(Handle:hPlugin, iNumParams) {
+	new iClient = GetNativeCell(1);
+	if(g_bIsHHH[iClient])return true;
+	return false;
+}
+
+public Native_HellmanCount(Handle:hPlugin, iNumParams) {
+	new iCount = 0;
+	for(new client = 1; client <= MaxClients; client++) {
+		if(IsClientInGame(client) && g_bIsHHH[client]) {
+			iCount++;
+		}
+	}
+
+	return iCount;
 }
 
 public OnConfigsExecuted() {
@@ -75,7 +144,35 @@ public OnConfigsExecuted() {
 	g_bDisableOnDeath = GetConVarBool(g_hCvarDisableOnDeath);
 	g_bEffectSound = GetConVarBool(g_hCvarEffectSound);
 	g_bEffectParticle = GetConVarBool(g_hCvarEffectParticle);
+
+	Forward_OverrideEffectParticles();
+	Forward_OverrideEffectSounds();
+	Forward_OverrideDisableOnDeath();
+
+	LogMessage("g_bEffectParticle: %i", g_bEffectParticle);
+	LogMessage("g_bEffectSound: %i", g_bEffectSound);
+	LogMessage("g_bDisableOnDeath: %i", g_bDisableOnDeath);
 }
+
+public Forward_OverrideEffectParticles() {
+	Call_StartForward(g_hForward_OverrideParticles);
+	Call_PushCellRef(g_bEffectParticle);
+	Call_Finish();
+}
+
+public Forward_OverrideEffectSounds() {
+	Call_StartForward(g_hForward_OverrideSound);
+	Call_PushCellRef(g_bEffectSound);
+	Call_Finish();
+}
+
+public Forward_OverrideDisableOnDeath() {
+	Call_StartForward(g_hForward_OverrideDOD);
+	Call_PushCellRef(g_bDisableOnDeath);
+	Call_Finish();
+}
+
+
 
 public Cvar_Changed(Handle:convar, const String:oldValue[], const String:newValue[]) {
 	OnConfigsExecuted();
@@ -99,6 +196,17 @@ public Cvar_Changed(Handle:convar, const String:oldValue[], const String:newValu
 
 public Action:Command_MakeMeHHH(iClient, args) {
 	if(!g_bEnabled && iClient > 0 && iClient < MaxClients)return Plugin_Handled;
+
+	new iResult;
+	Call_StartForward(g_hForward_OnManualCommand);
+	Call_PushCell(iClient);
+	Call_PushCell(args);
+	Call_Finish(iResult);
+
+	if(iResult > 0) {
+		ReplyToCommand(iClient, "A subplugin is blocking access to this command.");
+		return Plugin_Handled;
+	}
 
 	if(args > 0) {
 		if(!CheckCommandAccess(iClient, "sm_bethehhh", REQUIRED_FLAGS)) {
@@ -132,6 +240,10 @@ public Action:Command_MakeMeHHH(iClient, args) {
 		if(g_bIsHHH[iClient]) {
 			RemoveHHHModel(iClient);
 			g_bIsHHH[iClient] = false;
+
+			Call_StartForward(g_hForward_OnStop);
+			Call_PushCell(iClient);
+			Call_Finish();
 		} else {
 			if(!CheckCommandAccess(iClient, "sm_bethehhh", REQUIRED_FLAGS)) {
 				ReplyToCommand(iClient, "You don't have access to this command.");
@@ -166,6 +278,9 @@ public OnMapStart() {
 public MakeHHH(iClient) {
 	if(!g_bIsHHH[iClient]) {
 		g_bIsHHH[iClient] = true;
+		Call_StartForward(g_hForward_OnStart);
+		Call_PushCell(iClient);
+		Call_Finish();
 
 		if(!IsClientObserver(iClient) && IsPlayerAlive(iClient)) {
 			AssignHHHModel(iClient);
@@ -228,6 +343,9 @@ public Event_PlayerDeath(Handle:hEvent, String:strName[], bool:bDontBroadcast) {
 
 		if(g_bDisableOnDeath) {
 			g_bIsHHH[iClient] = false;
+			Call_StartForward(g_hForward_OnStop);
+			Call_PushCell(iClient);
+			Call_Finish();
 		}
 	}
 }
@@ -273,7 +391,9 @@ public AssignHHHModel(iClient) {
 
 	g_bHasHHHModel[iClient] = true;
 
-
+	Call_StartForward(g_hForward_OnModelAttached);
+	Call_PushCell(iClient);
+	Call_Finish();
 }
 
 public RemoveHHHModel(iClient) {
@@ -292,6 +412,10 @@ public RemoveHHHModel(iClient) {
 	}
 
 	g_bHasHHHModel[iClient] = false;
+
+	Call_StartForward(g_hForward_OnModelDettached);
+	Call_PushCell(iClient);
+	Call_Finish();
 }
 
 stock HHHSelf(iClient) {
