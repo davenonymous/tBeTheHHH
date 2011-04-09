@@ -12,12 +12,14 @@ new Handle:g_hCvarHHHTeam = INVALID_HANDLE;
 new g_iHellmanTeam;
 new g_iPeasantTeam;
 
+new g_iOriginalUnbalanceLimit = -1;
+new bool:g_bOriginalAutoTeamBalance = false;
 
 public Plugin:myinfo =
 {
 	name 		= "tBeTheHHH - HHH Team",
 	author 		= "Thrawn",
-	description = "",
+	description = "This forces HHHs to be on one team and the rest to be on the other.",
 	version 	= VERSION,
 };
 
@@ -32,8 +34,6 @@ public OnPluginStart() {
 	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
-	//TODO:: mp_teams_unbalance_limit remember + change
-
 	AddCommandListener(CommandListener_JoinTeam, "jointeam");
 }
 
@@ -41,12 +41,7 @@ public OnConfigsExecuted() {
 	g_bEnabled = GetConVarBool(g_hCvarEnabled);
 	g_iHellmanTeam = GetConVarInt(g_hCvarHHHTeam);
 	g_iPeasantTeam = g_iHellmanTeam == 2 ? 3 : 2;
-
-	FixCvarsForCompatibility(g_bEnabled);
 }
-
-new g_iOriginalUnbalanceLimit = -1;
-new bool:g_bOriginalAutoTeamBalance = false;
 
 public FixCvarsForCompatibility(bool:bEnableFix) {
 	new Handle:hCvarUnbalanceLimit = FindConVar("mp_teams_unbalance_limit");
@@ -66,6 +61,12 @@ public FixCvarsForCompatibility(bool:bEnableFix) {
 
 public Cvar_Changed(Handle:convar, const String:oldValue[], const String:newValue[]) {
 	OnConfigsExecuted();
+
+	if(convar == g_hCvarEnabled) {
+		FixCvarsForCompatibility(g_bEnabled);
+	}
+
+	// TODO: If g_hCvarHHHTeam changes, we might want to switch all players to the other team
 }
 
 public OnClientPutInServer(iClient) {
