@@ -6,6 +6,7 @@
 
 native HHH_ToggleHHH(iClient, bool:bState = true);
 native HHH_IsHHH(iClient);
+native HHH_IsBecomingHHH(iClient);
 native HHH_HellmanCount();
 
 
