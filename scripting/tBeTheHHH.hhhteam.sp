@@ -41,6 +41,8 @@ public OnConfigsExecuted() {
 	g_bEnabled = GetConVarBool(g_hCvarEnabled);
 	g_iHellmanTeam = GetConVarInt(g_hCvarHHHTeam);
 	g_iPeasantTeam = g_iHellmanTeam == 2 ? 3 : 2;
+
+	FixCvarsForCompatibility(g_bEnabled);
 }
 
 public FixCvarsForCompatibility(bool:bEnableFix) {
@@ -62,9 +64,9 @@ public FixCvarsForCompatibility(bool:bEnableFix) {
 public Cvar_Changed(Handle:convar, const String:oldValue[], const String:newValue[]) {
 	OnConfigsExecuted();
 
-	if(convar == g_hCvarEnabled) {
-		FixCvarsForCompatibility(g_bEnabled);
-	}
+	//if(convar == g_hCvarEnabled) {
+	//	FixCvarsForCompatibility(g_bEnabled);
+	//}
 
 	// TODO: If g_hCvarHHHTeam changes, we might want to switch all players to the other team
 }
