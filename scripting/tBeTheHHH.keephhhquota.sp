@@ -36,7 +36,7 @@ public OnPluginStart() {
 	HookConVarChange(g_hCvarMaximal, Cvar_Changed);
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("player_death", Event_PlayerDeath);
+	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 }
 
 public Cvar_Changed(Handle:convar, const String:oldValue[], const String:newValue[]) {
@@ -81,7 +81,7 @@ public HHH_OnStop(iClient) {
 public bool:HHH_RequiredForQuota() {
 	if(HHH_HellmanCount() < g_iMin)return true;
 	if(HHH_HellmanCount() >= g_iMax)return false;
-	if(HHH_HellmanCount() >= RoundToFloor(Float:GetClientCount() / g_fQuota))return false;
+	if(HHH_HellmanCount() >= RoundToFloor(GetClientCount() / g_fQuota))return false;
 	else return true;
 }
 
@@ -100,10 +100,15 @@ stock MakeRandomHHH(iExcept = 0) {
 	}
 }
 
-public Event_PlayerDeath(Handle:hEvent, String:strName[], bool:bDontBroadcast) {
-	if(!g_bEnabled)return;
+public Action:Event_PlayerDeath(Handle:hEvent, String:strName[], bool:bDontBroadcast) {
+	if(!g_bEnabled)return Plugin_Continue;
 	new iClient = GetClientOfUserId(GetEventInt(hEvent, "userid"));
 	new iAttacker = GetClientOfUserId(GetEventInt(hEvent, "attacker"));
+
+	if(HHH_IsBecomingHHH(iClient)) {
+		bDontBroadcast = true;
+		return Plugin_Changed;
+	}
 
 	if(HHH_IsHHH(iClient)) {
 		// Death always means stop being a HHH
@@ -111,7 +116,7 @@ public Event_PlayerDeath(Handle:hEvent, String:strName[], bool:bDontBroadcast) {
 
 		// Calculate quota (how many HHH are required)
 		// and only replace if necessary
-		if(!HHH_RequiredForQuota())return;
+		if(!HHH_RequiredForQuota())return Plugin_Continue;
 
 		if(iAttacker == 0 || iAttacker == iClient || HHH_IsHHH(iAttacker)) {
 			//HHH killed himself or by world or by another HHH
@@ -125,12 +130,13 @@ public Event_PlayerDeath(Handle:hEvent, String:strName[], bool:bDontBroadcast) {
 		}
 
 	}
+
+	return Plugin_Continue;
 }
 
 public Event_PlayerSpawn(Handle:hEvent, String:strName[], bool:bDontBroadcast) {
 	if(!g_bEnabled)return;
 	if(!HHH_RequiredForQuota())return;
-
 	MakeRandomHHH();
 
 	return;
