@@ -5,6 +5,7 @@
 
 #define VERSION 		"0.0.5-beta1"
 
+
 #define MODEL_HHH		"models/bots/headless_hatman.mdl"
 //#define MODEL_HHH		"models/player/demo.mdl"
 //#define MODEL_HHH		"models/player/engineer.mdl"
@@ -37,6 +38,7 @@ new bool:g_bEnabled;
 new Handle:g_hCvarDisableOnDeath = INVALID_HANDLE;
 new bool:g_bDisableOnDeath;
 
+new bool:g_bIsBecomingHHH[MAXPLAYERS+1];
 new bool:g_bIsHHH[MAXPLAYERS+1];
 new bool:g_bHasHHHModel[MAXPLAYERS+1];
 new g_iEntityOthers[MAXPLAYERS+1];
@@ -100,6 +102,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max) 
 
 	CreateNative("HHH_ToggleHHH", Native_ToggleHHH);
 	CreateNative("HHH_IsHHH", Native_IsHHH);
+	CreateNative("HHH_IsBecomingHHH", Native_IsBecomingHHH);
 	CreateNative("HHH_HellmanCount", Native_HellmanCount);
 
 	return APLRes_Success;
@@ -125,6 +128,12 @@ public Native_ToggleHHH(Handle:hPlugin, iNumParams) {
 public Native_IsHHH(Handle:hPlugin, iNumParams) {
 	new iClient = GetNativeCell(1);
 	if(g_bIsHHH[iClient])return true;
+	return false;
+}
+
+public Native_IsBecomingHHH(Handle:hPlugin, iNumParams) {
+	new iClient = GetNativeCell(1);
+	if(g_bIsBecomingHHH[iClient])return true;
 	return false;
 }
 
@@ -278,6 +287,7 @@ public OnMapStart() {
 public MakeHHH(iClient) {
 	if(!g_bIsHHH[iClient]) {
 		g_bIsHHH[iClient] = true;
+		g_bIsBecomingHHH[iClient] = true;
 		Call_StartForward(g_hForward_OnStart);
 		Call_PushCell(iClient);
 		Call_Finish();
@@ -286,6 +296,8 @@ public MakeHHH(iClient) {
 			AssignHHHModel(iClient);
 			CreateTimer(0.5, HHHSummonEffects, iClient);
 		}
+
+		g_bIsBecomingHHH[iClient] = false;
 	}
 }
 
@@ -338,7 +350,7 @@ public Event_PlayerDeath(Handle:hEvent, String:strName[], bool:bDontBroadcast) {
 	if(!g_bEnabled)return;
 	new iClient = GetClientOfUserId(GetEventInt(hEvent, "userid"));
 
-	if(g_bIsHHH[iClient]) {
+	if(g_bIsHHH[iClient] && !g_bIsBecomingHHH[iClient]) {
 		HHHDeath(iClient);
 
 		if(g_bDisableOnDeath) {
